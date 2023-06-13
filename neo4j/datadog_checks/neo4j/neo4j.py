@@ -92,7 +92,7 @@ class Neo4jCheck(PrometheusCheck):
             if metric.name.startswith("neo4j_dbms_"):
                 db_name = GLOBAL_DB_NAME
                 metric.name = metric.name.replace("neo4j_dbms_", "", 1)
-            else:
+            elif metric.name.startswith("neo4j_database_"):
                 db_name, metric_name = metric.name.replace("neo4j_database_", "", 1).split("_", 1)
                 metric.name = metric_name
                 # Exclude databases not in neo4j_dbs, if that config is set
