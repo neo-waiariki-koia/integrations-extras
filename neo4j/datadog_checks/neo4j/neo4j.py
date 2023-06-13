@@ -30,7 +30,7 @@ class Neo4jCheck(PrometheusCheck):
     METADATA_LABEL_PREFIX = "dbmeta"
 
     def check(self, instance):
-        self._set_whitelisted_metrics()
+        self._set_allowlisted_metrics()
         config = self._get_config(instance=instance)
         self.exclude_labels = config.exclude_labels
 
@@ -106,13 +106,13 @@ class Neo4jCheck(PrometheusCheck):
             if meta_map and db_name in meta_map:
                 tags.extend(meta_map[db_name])
 
-            self.process_metric(message=metric, custom_tags=tags)
+            self.process_metric(message=metric, custom_tags=tags, ignore_unmapped=True)
 
     def _check_legacy_metrics(self, metrics, config, meta_map):
         for metric in metrics:
             if metric.name == "metadata_info":
                 continue
-            
+
             metric.name = metric.name.replace('neo4j_', '', 1)
             db_name = GLOBAL_DB_NAME
             if config.neo4j_version.startswith("4.") or config.neo4j_version.startswith("5."):
@@ -128,7 +128,7 @@ class Neo4jCheck(PrometheusCheck):
             if meta_map and db_name in meta_map:
                 tags.extend(meta_map[db_name])
 
-            self.process_metric(message=metric, custom_tags=tags)
+            self.process_metric(message=metric, custom_tags=tags, ignore_unmapped=True)
 
     def _get_db_for_metric(self, dbs, metric_name):
         for db in dbs:
@@ -162,12 +162,12 @@ class Neo4jCheck(PrometheusCheck):
             raise ConfigurationError('"{}" is a required configuration'.format(key))
         return value
 
-    def _set_whitelisted_metrics(self):
+    def _set_allowlisted_metrics(self):
         self.NAMESPACE = NAMESPACE
-        self.metrics_mapper = Neo4jCheck.get_whitelisted_metrics()
+        self.metrics_mapper = Neo4jCheck.get_allowlisted_metrics()
 
     @staticmethod
-    def get_whitelisted_metrics():
+    def get_allowlisted_metrics():
         return {
             # bolt metrics
             'bolt_accumulated_processing_time_total': 'bolt.accumulated_processing_time',
@@ -398,11 +398,9 @@ class Neo4jCheck(PrometheusCheck):
             'db_query_execution_failure_total': 'db.query.execution.failure.total',
             'db_query_execution_latency_millis': 'db.query.execution.latency.millis',
 
-            # GDS metrics
-            'gds_graphs_created': 'gds.graphs_created',
-            'gds_models_created': 'gds.models_created',
-            'gds_aura_shutdown_time': 'gds.aura.shutdown_time',
-            'gds_aura_shutdown_failed': 'gds.aura.shutdown_failed',
-            'gds_aura_backup_time': 'gds.aura.backup_time',
-            'gds_aura_backup_failed': 'gds.aura.backup_failed',
+            # This will ensure we export metrics even if we don't match anything in the allowlist. The metrics that
+            # are found in the allowlist are mapped to the new names but if there is a KeyError, the integration will
+            # check for wildcards matching the metric.
+            # (Source: https://github.com/DataDog/integrations-core/blob/master/datadog_checks_base/datadog_checks/base/checks/prometheus/mixins.py#L516-L539)
+            '*': '*'
         }
