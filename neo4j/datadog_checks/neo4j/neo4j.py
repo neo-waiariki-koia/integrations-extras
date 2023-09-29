@@ -52,7 +52,7 @@ class Neo4jCheck(PrometheusCheck):
                 metadata_info_metric = metric
                 continue
 
-            if metric.name.startswith("neo4j_dbms_") or metric.name.startswith("neo4j_database_"):
+            if metric.name.startswith("neo4j_dbms_") or metric.name.startswith("neo4j_database_") or metric.name.startswith("gds"):
                 is_namespaced = True
 
             if metadata_info_metric is not None:
@@ -99,7 +99,11 @@ class Neo4jCheck(PrometheusCheck):
                 if config.neo4j_dbs and db_name not in config.neo4j_dbs:
                     continue
 
-            tags = ['db_name:{}'.format(db_name)]
+            tags = []
+
+            if db_name: 
+                tags.extend(['db_name:{}'.format(db_name)])
+
             if config.instance_tags:
                 tags.extend(config.instance_tags.copy())
 
